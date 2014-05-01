@@ -2,8 +2,7 @@
 
 import random
 import sys
-import getopt
-from math import sqrt
+
 
 def rand_seq(size):
     '''generates values in random order
@@ -37,37 +36,38 @@ def reversed_sections(tour):
             if copy != tour: # no point returning the same tour
                 yield copy
 
-def swapped_cities(tour):
-    '''generator to create all possible variations where two cities have been swapped'''
-    for i,j in all_pairs(len(tour)):
-        if i < j:
-            copy=tour[:]
-            copy[i],copy[j]=tour[j],tour[i]
-            yield copy
 
-def cartesian_matrix(coords):
-    '''create a distance matrix for the city coords that uses straight line distance'''
-    matrix={}
-    for i,(x1,y1) in enumerate(coords):
-        for j,(x2,y2) in enumerate(coords):
-            dx,dy=x1-x2,y1-y2
-            dist=sqrt(dx*dx + dy*dy)
-            matrix[i,j]=dist
-    return matrix
+#
+#def init_matrix():    
+#    '''create a distance matrix for the city coords that uses straight line distance'''
+#    matrix={}
+#    matrix[2,9] =    110
+#    matrix[2,7] =  62
+#    matrix[2,6] =  58
+#    matrix[2,5] =  90
+#    matrix[5,9] =  57
+#    matrix[5,7] =  151
+#    matrix[5,6] =  104
+#    matrix[5,2] =  90
+#    matrix[6,9] =  147
+#    matrix[6,7] =  74
+#    matrix[6,5] =  104
+#    matrix[6,2] =  58
+#    matrix[7,9] =  172
+#    matrix[7,6] =  74
+#    matrix[7,5] =  151
+#    matrix[7,2] =  62
+#    matrix[9,7] =    172
+#    matrix[9,6] =  147
+#    matrix[9,5] =  57
+#    matrix[9,2] =  110
+#    return matrix
 
-def read_coords(coord_file):
-    '''
-    read the coordinates from file and return the distance matrix.
-    coords should be stored as comma separated floats, one x,y pair per line.
-    '''
-    coords=[]
-    for line in coord_file:
-        x,y=line.strip().split(',')
-        coords.append((float(x),float(y)))
-    return coords
+
 
 def tour_length(matrix,tour):
     '''total up the total length of the tour based on the distance matrix'''
+    
     total=0
     num_cities=len(tour)
     for i in range(num_cities):
@@ -78,80 +78,29 @@ def tour_length(matrix,tour):
     return total
 
 
-def init_random_tour(tour_length):
-   tour=range(tour_length)
-   random.shuffle(tour)
-   return tour
+def init_random_tour(storelist):
+   return storelist
 
 def run_hillclimb(init_function,move_operator,objective_function,max_iterations):
     from hillclimb import hillclimb_and_restart
     iterations,score,best=hillclimb_and_restart(init_function,move_operator,objective_function,max_iterations)
     return iterations,score,best
 
-def run_anneal(init_function,move_operator,objective_function,max_iterations,start_temp,alpha):
-    if start_temp is None or alpha is None:
-        usage();
-        print "missing --cooling start_temp:alpha for annealing"
-        sys.exit(1)
-    from sa import anneal
-    iterations,score,best=anneal(init_function,move_operator,objective_function,max_iterations,start_temp,alpha)
-    return iterations,score,best
 
 def usage():
     print "usage: python %s [-o <output image file>] [-v] [-m reversed_sections|swapped_cities] -n <max iterations> [-a hillclimb|anneal] [--cooling start_temp:alpha] <city file>" % sys.argv[0]
 
-def main():
-    try:
-        options, args = getopt.getopt(sys.argv[1:], "ho:vm:n:a:", ["cooling="])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    out_file_name=None
-    max_iterations=None
-    verbose=None
+
+
+def tspfunction(matrix, storelist, DEBUG):
+    
+    #make market sets coordinates
+
+
+    max_iterations=1000
+    verbose=False
     move_operator=reversed_sections
     run_algorithm=run_hillclimb
-    
-    start_temp,alpha=None,None
-    
-    for option,arg in options:
-        if option == '-v':
-            verbose=True
-        elif option == '-h':
-            usage()
-            sys.exit()
-        elif option == '-o':
-            out_file_name=arg
-        elif option == '-n':
-            max_iterations=int(arg)
-        elif option == '-m':
-            if arg == 'swapped_cities':
-                move_operator=swapped_cities
-            elif arg == 'reversed_sections':
-                move_operator=reversed_sections
-        elif option == '-a':
-            if arg == 'hillclimb':
-                run_algorithm=run_hillclimb
-            elif arg == 'anneal':
-                # do this to pass start_temp and alpha to run_anneal
-                def run_anneal_with_temp(init_function,move_operator,objective_function,max_iterations):
-                    return run_anneal(init_function,move_operator,objective_function,max_iterations,start_temp,alpha)
-                run_algorithm=run_anneal_with_temp
-        elif option == '--cooling':
-            start_temp,alpha=arg.split(':')
-            start_temp,alpha=float(start_temp),float(alpha)
-    
-    if max_iterations is None:
-        usage();
-        sys.exit(2)
-    
-    
-    if len(args) != 1:
-        usage()
-        print "no city file specified"
-        sys.exit(1)
-    
-    city_file=args[0]
     
     # enable more verbose logging (if required) so we can see workings
     # of the algorithms
@@ -163,17 +112,18 @@ def main():
         logging.basicConfig(format=format)
     
     # setup the things tsp specific parts hillclimb needs
-    coords=read_coords(file(city_file))
-    init_function=lambda: init_random_tour(len(coords))
-    matrix=cartesian_matrix(coords)
+
+    
+    
+    init_function=lambda: init_random_tour(storelist)
+    
     objective_function=lambda tour: -tour_length(matrix,tour)
     
     logging.info('using move_operator: %s'%move_operator)
     
     iterations,score,best=run_algorithm(init_function,move_operator,objective_function,max_iterations)
     # output results
-    print iterations,score,best
+    #print "here it is",iterations,score,best
+    return best
 
 
-if __name__ == "__main__":
-    main()
